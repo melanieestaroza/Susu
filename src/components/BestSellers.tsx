@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, Loader, ArrowUp, ArrowDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
+import ImageModal from './ImageModal';
 import { 
   getFeaturedProducts, 
   addFeaturedProduct, 
@@ -11,11 +13,19 @@ import {
 
 const BestSellers: React.FC = () => {
   const { isAuthenticated } = useAuth();
+  const { ref, hasIntersected } = useIntersectionObserver({ threshold: 0.1 });
   const [products, setProducts] = useState<FeaturedProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<FeaturedProduct | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{
+    image: string;
+    title: string;
+    description?: string;
+    price?: string;
+    category?: string;
+  } | null>(null);
 
   useEffect(() => {
     loadFeaturedProducts();
@@ -107,7 +117,6 @@ const BestSellers: React.FC = () => {
       const currentProduct = products[currentIndex];
       const targetProduct = products[targetIndex];
       
-      // Intercambiar órdenes
       const currentOrder = currentProduct.order || currentIndex;
       const targetOrder = targetProduct.order || targetIndex;
       
@@ -120,6 +129,16 @@ const BestSellers: React.FC = () => {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleImageClick = (product: FeaturedProduct) => {
+    setSelectedImage({
+      image: product.image,
+      title: product.name,
+      description: product.description,
+      price: product.price,
+      category: product.category
+    });
   };
 
   const FeaturedProductForm: React.FC<{
@@ -152,8 +171,8 @@ const BestSellers: React.FC = () => {
     };
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
           <h3 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
             {product ? 'Editar Producto Destacado' : 'Agregar Producto Destacado'}
           </h3>
@@ -166,7 +185,7 @@ const BestSellers: React.FC = () => {
                 type="text"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Nombre del producto"
                 required
               />
@@ -180,7 +199,7 @@ const BestSellers: React.FC = () => {
                 type="url"
                 value={formData.image}
                 onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="https://ejemplo.com/imagen.jpg"
                 required
               />
@@ -189,7 +208,8 @@ const BestSellers: React.FC = () => {
                   <img 
                     src={formData.image} 
                     alt="Preview" 
-                    className="w-full h-32 object-cover rounded-lg"
+                    className="w-full h-32 object-cover rounded-xl"
+                    loading="lazy"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
@@ -206,7 +226,7 @@ const BestSellers: React.FC = () => {
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 required
               >
                 <option value="">Seleccionar categoría</option>
@@ -229,7 +249,7 @@ const BestSellers: React.FC = () => {
                 type="text"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Ej: $850"
               />
             </div>
@@ -241,7 +261,7 @@ const BestSellers: React.FC = () => {
               <textarea
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="Descripción del producto"
                 rows={3}
               />
@@ -255,7 +275,7 @@ const BestSellers: React.FC = () => {
                 type="number"
                 value={formData.order}
                 onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-xl dark:bg-gray-700 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                 placeholder="0"
                 min="0"
               />
@@ -265,7 +285,7 @@ const BestSellers: React.FC = () => {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white py-2 px-4 rounded-lg transition-colors duration-200 font-medium flex items-center justify-center"
+                className="flex-1 btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 {saving ? (
                   <>
@@ -280,7 +300,7 @@ const BestSellers: React.FC = () => {
                 type="button"
                 onClick={onCancel}
                 disabled={saving}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 disabled:bg-gray-400 text-white py-2 px-4 rounded-lg transition-colors duration-200 font-medium"
+                className="flex-1 btn-secondary disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
@@ -305,12 +325,17 @@ const BestSellers: React.FC = () => {
   }
 
   return (
-    <section className="py-16 bg-white dark:bg-gray-800">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section ref={ref} className="py-16 bg-white dark:bg-gray-800 relative overflow-hidden">
+      {/* Background Pattern */}
+      <div className="absolute inset-0 opacity-5">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-500 to-purple-600"></div>
+      </div>
+      
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-12">
-          <div className="text-center flex-1">
+          <div className={`text-center flex-1 transition-all duration-1000 ${hasIntersected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Productos Destacados
+              Productos <span className="gradient-text">Destacados</span>
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Descubre nuestros productos más populares, elegidos por miles de clientes satisfechos.
@@ -320,7 +345,7 @@ const BestSellers: React.FC = () => {
             <button
               onClick={() => setShowAddForm(true)}
               disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-lg flex items-center transition-colors duration-200 font-medium ml-4"
+              className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed flex items-center ml-4"
             >
               <Plus className="h-5 w-5 mr-2" />
               Agregar
@@ -333,32 +358,43 @@ const BestSellers: React.FC = () => {
             {products.map((product, index) => (
               <div
                 key={product.id}
-                className="bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2"
+                className={`card-enhanced group cursor-pointer transition-all duration-500 ${hasIntersected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}
+                style={{ transitionDelay: `${index * 0.1}s` }}
+                onClick={() => handleImageClick(product)}
               >
-                <div className="aspect-w-16 aspect-h-12 overflow-hidden relative">
+                <div className="aspect-w-16 aspect-h-12 overflow-hidden relative rounded-t-2xl">
                   <img
                     src={product.image}
                     alt={product.name}
-                    className="w-full h-48 object-cover"
+                    className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-110"
+                    loading="lazy"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = 'https://images.pexels.com/photos/2251247/pexels-photo-2251247.jpeg?auto=compress&cs=tinysrgb&w=800';
                     }}
                   />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                  
                   {isAuthenticated && (
-                    <div className="absolute top-2 right-2 flex flex-col space-y-1">
+                    <div className="absolute top-2 right-2 flex flex-col space-y-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                       <button
-                        onClick={() => product.id && handleMoveProduct(product.id, 'up')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          product.id && handleMoveProduct(product.id, 'up');
+                        }}
                         disabled={saving || index === 0}
-                        className="p-1 bg-white/80 hover:bg-white text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1 bg-white/90 hover:bg-white text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         title="Mover arriba"
                       >
                         <ArrowUp className="h-3 w-3" />
                       </button>
                       <button
-                        onClick={() => product.id && handleMoveProduct(product.id, 'down')}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          product.id && handleMoveProduct(product.id, 'down');
+                        }}
                         disabled={saving || index === products.length - 1}
-                        className="p-1 bg-white/80 hover:bg-white text-gray-700 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1 bg-white/90 hover:bg-white text-gray-700 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                         title="Mover abajo"
                       >
                         <ArrowDown className="h-3 w-3" />
@@ -366,48 +402,61 @@ const BestSellers: React.FC = () => {
                     </div>
                   )}
                 </div>
+                
                 <div className="p-6">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-blue-600 dark:text-blue-400 font-medium">
+                    <span className="text-sm text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-full">
                       {product.category}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                  
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                     {product.name}
                   </h3>
+                  
                   {product.price && (
                     <p className="text-2xl font-bold text-blue-600 dark:text-blue-400 mb-3">
                       {product.price}
                     </p>
                   )}
+                  
                   {product.description && (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 line-clamp-2">
                       {product.description}
                     </p>
                   )}
+                  
                   <div className="flex justify-between items-center">
                     <a
                       href="https://wa.me/541125192502"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors duration-200 font-medium"
+                      onClick={(e) => e.stopPropagation()}
+                      className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl text-sm transition-all duration-300 font-medium transform hover:scale-105 shadow-lg"
                     >
                       Consultar
                     </a>
+                    
                     {isAuthenticated && (
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => setEditingProduct(product)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProduct(product);
+                          }}
                           disabled={saving}
-                          className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded transition-colors duration-200 disabled:opacity-50"
+                          className="p-2 text-blue-600 hover:bg-blue-100 dark:hover:bg-blue-900 rounded-lg transition-colors duration-200 disabled:opacity-50"
                           title="Editar producto"
                         >
                           <Edit className="h-4 w-4" />
                         </button>
                         <button
-                          onClick={() => product.id && handleDeleteProduct(product.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            product.id && handleDeleteProduct(product.id);
+                          }}
                           disabled={saving}
-                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded transition-colors duration-200 disabled:opacity-50"
+                          className="p-2 text-red-600 hover:bg-red-100 dark:hover:bg-red-900 rounded-lg transition-colors duration-200 disabled:opacity-50"
                           title="Eliminar producto"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -438,7 +487,7 @@ const BestSellers: React.FC = () => {
                 <button
                   onClick={() => setShowAddForm(true)}
                   disabled={saving}
-                  className="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-2 rounded-lg transition-colors duration-200 font-medium"
+                  className="btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Agregar Primer Producto
                 </button>
@@ -447,12 +496,12 @@ const BestSellers: React.FC = () => {
           </div>
         )}
 
-        <div className="text-center mt-12">
+        <div className={`text-center mt-12 transition-all duration-1000 delay-500 ${hasIntersected ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <a
             href="https://wa.me/541125192502"
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-full transition-all duration-300 transform hover:scale-105"
+            className="inline-flex items-center btn-primary pulse-on-hover"
           >
             Consultar Precios
           </a>
@@ -474,13 +523,23 @@ const BestSellers: React.FC = () => {
         )}
 
         {saving && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 flex items-center space-x-3">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 flex items-center space-x-3 shadow-2xl">
               <Loader className="animate-spin h-6 w-6 text-blue-600" />
               <span className="text-gray-900 dark:text-white font-medium">Guardando...</span>
             </div>
           </div>
         )}
+
+        <ImageModal
+          isOpen={!!selectedImage}
+          onClose={() => setSelectedImage(null)}
+          image={selectedImage?.image || ''}
+          title={selectedImage?.title || ''}
+          description={selectedImage?.description}
+          price={selectedImage?.price}
+          category={selectedImage?.category}
+        />
       </div>
     </section>
   );
